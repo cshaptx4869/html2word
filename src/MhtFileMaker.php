@@ -3,6 +3,7 @@
 namespace Fairy;
 
 use Exception;
+use Nette\Utils\Image;
 
 /**
  * 由html导出word格式
@@ -274,75 +275,90 @@ class MhtFileMaker
     }
 
     /**
-     * 该函数会分析img标签，提取src的属性值
-     * 补全图片的相对地址为绝对地址
-     * 分析文件内容并从远程下载页面中的图片资源
-     * @param string $host
-     * @param bool $isEraseLink
+     * 去除链接
      * @return $this
-     * @throws Exception
      */
-    public function completeImg($host = "", $isEraseLink = false)
+    public function eraseLink()
     {
         foreach ($this->files as &$file) {
             $content = base64_decode(str_replace(PHP_EOL, '', $file['filecont']));
-            if ($isEraseLink) {
-                $content = preg_replace('/<a.*?>(.*?)<\/a>/i', '$1', $content);
+            $content = preg_replace('/<a.*?>(.*?)<\/a>/i', '$1', $content);
+            $file['filecont'] = chunk_split(base64_encode($content));
+        }
+        return $this;
+    }
+
+    /**
+     * 该函数会分析img标签，提取src的属性值
+     * 补全图片的相对地址为网络绝对地址
+     * 分析文件内容并从远程下载页面中的图片资源
+     * @param string $host
+     * @return $this
+     * @throws \Nette\Utils\UnknownImageFileException
+     */
+    public function fetchImg($host = "")
+    {
+        $images = [];
+        foreach ($this->files as &$file) {
+            $content = base64_decode(str_replace(PHP_EOL, '', $file['filecont']));
+            if ($host) {
+                $content = preg_replace_callback('/<img.*?(?:>|\/>)/is', function ($imageTag) use ($host) {
+                    $imageTag = preg_replace_callback('/(src\s*=\s*[\'\"]?)([^\'\"]*)([\'\"]?)/i', function ($src) use ($host) {
+                        if (!preg_match('/^http[s]?:\/\//i', trim($src[2]))) {
+                            $url = $host . $src[2];
+                            $file['filepath'] = $url;
+                            return $src[1] . $url . $src[3];
+                        } else {
+                            return $src[0];
+                        }
+                    }, $imageTag[0]);
+                    return $imageTag;
+                }, $content);
                 $file['filecont'] = chunk_split(base64_encode($content));
             }
-            $images = $files = [];
+
             // 匹配图片
             if (preg_match_all('/<img.*?(?:>|\/>)/is', $content, $imgTags)) {
                 foreach ($imgTags[0] as $imgTag) {
-                    if (preg_match_all('/src=[\'\"]?([^\'\"]*)[\'\"]?/i', $imgTag, $srcPaths)) {
-                        foreach ($srcPaths[1] as $srcPath) {
-                            $srcPath = trim($srcPath);
-                            if ($srcPath != "") {
-                                $files[] = $srcPath;
-                                if (preg_match('/^http[s]?:\/\//i', $srcPath)) {
-                                    //绝对链接，不加前缀
-                                    $imgPath = $srcPath;
-                                } else {
-                                    $imgPath = $host . '/' . $srcPath;
-                                }
-                                $images[] = $imgPath;
+                    if (preg_match('/src\s*=\s*[\'\"]?([^\'\"]*)[\'\"]?/i', $imgTag, $srcPaths)) {
+                        $srcPath = trim($srcPaths[1]);
+                        if ($srcPath != "") {
+                            $width = $height = null;
+                            if (preg_match('/width\s*[=:]\s*[\'\"]?(\d+)[\'\"]?/i', $imgTag, $sizes)) {
+                                $width = $sizes[1];
                             }
+                            if (preg_match('/height\s*[=:]\s*[\'\"]?(\d+).*?[\'\"]?/i', $imgTag, $sizes)) {
+                                $height = $sizes[1];
+                            }
+                            $images[] = [
+                                'path' => $srcPath,
+                                'width' => $width,
+                                'height' => $height
+                            ];
                         }
                     }
                 }
             }
-
-            for ($i = 0; $i < count($images); $i++) {
-                $image = $images[$i];
-                if ($imgContent = file_get_contents($image)) {
-                    if ($content) {
-                        $this->addContents($files[$i], $this->getMimeType($image), $imgContent);
-                    }
-                } else {
-                    throw new Exception("file:" . $image . " not exist!");
-                }
-            }
-
-            // 此方法只能联网时才能获取图片
-            /*            $content = base64_decode(str_replace(PHP_EOL, '', $file['filecont']));
-                        if ($isEraseLink) {
-                            $content = preg_replace('/<a.*?>(.*?)<\/a>/i', '$1', $content);
-                        }
-                        $content = preg_replace_callback('/<img.*?(?:>|\/>)/is', function ($imageTag) use ($host) {
-                            $imageTag = preg_replace_callback('/(src=[\'\"]?)([^\'\"]*)([\'\"]?)/i', function ($src) use ($host) {
-                                if (!preg_match('/http[s]?:\/\//i', $src[2])) {
-                                    //绝对链接，不加前缀
-                                    return $src[1] . $host . DIRECTORY_SEPARATOR . $src[2] . $src[3];
-                                } else {
-                                    return $src[0];
-                                }
-                            }, $imageTag[0]);
-                            return $imageTag;
-                        }, $content);
-                        $file['filecont'] = chunk_split(base64_encode($content));*/
         }
+        $this->addImgFile($images);
 
         return $this;
+    }
+
+    /**
+     * 下载图片资源
+     * @param array $images
+     * @throws \Nette\Utils\UnknownImageFileException
+     */
+    protected function addImgFile(array $images)
+    {
+        foreach ($images as $image) {
+            $imgObj = Image::fromFile($image['path']);
+            if ($image['width'] || $image['height']) {
+                $imgObj->resize($image['width'], $image['height']);
+            }
+            $this->addContents($image['path'], $this->getMimeType($image['path']), (string)$imgObj);
+        }
     }
 
     /**
@@ -353,6 +369,10 @@ class MhtFileMaker
      */
     function makeFile($filename)
     {
+        $ext = pathinfo($filename, PATHINFO_EXTENSION);
+        if (!in_array(strtolower($ext), ['doc', 'docx'])) {
+            throw new Exception('not support file type ' . $ext);
+        }
         return file_put_contents($filename, $this->getFile()) > 0;
     }
 
@@ -365,14 +385,12 @@ class MhtFileMaker
     public function download($name = null, $type = 2003)
     {
         $name = $name ? $name : date('YmdHis');
-        $content = $this->getFile();
-        // 导出
         header("Content-Disposition: attachment; filename=" . $name . $this->version($type)['ext']);
         header("Content-Type:" . $this->version($type)['mime']);
         header('Content-Transfer-Encoding: binary');
         header("Cache-Control: no-cache, must-revalidate, post-check=0, pre-check=0");
         header('Expires: 0');
-        echo $content;
+        echo $this->getFile();
     }
 
     /**
