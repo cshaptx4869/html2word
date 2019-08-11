@@ -373,7 +373,8 @@ class MhtFileMaker
         if (!in_array(strtolower($ext), ['doc', 'docx'])) {
             throw new Exception('not support file type ' . $ext);
         }
-        return file_put_contents($filename, $this->getFile()) > 0;
+        $content = $this->getFile();
+        return file_put_contents($filename, $content) > 0;
     }
 
     /**
@@ -385,12 +386,14 @@ class MhtFileMaker
     public function download($name = null, $type = 2003)
     {
         $name = $name ? $name : date('YmdHis');
+        $content = $this->getFile();
+
         header("Content-Disposition: attachment; filename=" . $name . $this->version($type)['ext']);
         header("Content-Type:" . $this->version($type)['mime']);
         header('Content-Transfer-Encoding: binary');
         header("Cache-Control: no-cache, must-revalidate, post-check=0, pre-check=0");
         header('Expires: 0');
-        echo $this->getFile();
+        echo $content;
     }
 
     /**

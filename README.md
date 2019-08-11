@@ -1,4 +1,4 @@
-# HTML2WORD
+# HTML转WORD
 
 html文件转word格式，欢迎 Star (●'◡'●)
 
@@ -54,14 +54,23 @@ composer require cshaptx4869/html2word
 
 ###### run.php
 
+> Html2WordMaker 和 MhtFileMaker 都可以实现。只是原理稍微不同，前者是直接html写入文件，后者是借助mht再写入文件。
+
 ```php
 <?php
 
 require_once 'vendor/autoload.php';
 
+use Fairy\Html2WordMaker;
 use Fairy\MhtFileMaker;
 
 // 1、保存为文件
+Html2WordMaker::getInstance()
+    ->addFile('resource/tpl.html')
+    ->eraseLink()
+    ->fetchImg('http://php.test/html2word')
+    ->makeFile('resource/a.doc');
+
 MhtFileMaker::getInstance()
     ->addFile('resource/tpl.html')
     ->eraseLink()
@@ -69,6 +78,11 @@ MhtFileMaker::getInstance()
     ->makeFile('resource/a.doc');
 
 // 2、浏览器下载
+Html2WordMaker::getInstance()
+    ->addFile('resource/tpl.html')
+    ->fetchImg('http://php.test/html2word')
+    ->download();
+
 MhtFileMaker::getInstance()
     ->addFile('resource/tpl.html')
     ->fetchImg('http://php.test/html2word')
