@@ -11,36 +11,15 @@ use Nette\Utils\Image;
  *
  * 关于mht
  * Mht 会把网页中全部元素保存在一个文件里，不生成一个单独的文件夹，对于你文件的保存、管理会比较方便。
- *
- * Class MhtFileMaker
- * @package app\common\lib\utils
  */
-class MhtFileMaker
+class MhtFileMaker extends MakerAbstract
 {
-    static private $instance;
-    public $files = [];
-    public $boundary;
-    public $headers = [];
-    public $headersExists = [];
-    public $dirBase;
-    public $pageFirst;
-
-    /**
-     * 单例
-     * @return MhtFileMaker
-     */
-    static public function getInstance()
-    {
-        if (is_null(self::$instance)) {
-            self::$instance = new self();
-        }
-        return self::$instance;
-    }
-
-    protected function __construct()
-    {
-
-    }
+    protected $files = [];
+    protected $boundary;
+    protected $headers = [];
+    protected $headersExists = [];
+    protected $dirBase;
+    protected $pageFirst;
 
     public function setHeader($header)
     {
@@ -68,18 +47,21 @@ class MhtFileMaker
         } else {
             $this->boundary = $boundary;
         }
+
         return $this;
     }
 
     public function setBaseDir($dir)
     {
         $this->dirBase = str_replace("\\", "/", realpath($dir));
+
         return $this;
     }
 
     public function setFirstPage($filename)
     {
         $this->pageFirst = str_replace("\\", "/", realpath("{$this->dirBase}/$filename"));
+
         return $this;
     }
 
@@ -156,122 +138,14 @@ class MhtFileMaker
      * @param $filecont
      * @param null $encoding
      */
-    public function addContents($filepath, $mimetype, $filecont, $encoding = null)
+    protected function addContents($filepath, $mimetype, $filecont, $encoding = null)
     {
         $this->files[] = [
             'filepath' => $filepath,
             'mimetype' => $mimetype,
             'filecont' => chunk_split(base64_encode($filecont)),
-            'encoding' => $encoding ? $encoding : 'base64'
+            'encoding' => $encoding ?: 'base64'
         ];
-    }
-
-    /**
-     * 检查生成完整文档必要的信息
-     */
-    public function checkHeaders()
-    {
-        if (!array_key_exists('date', $this->headersExists)) {
-            $this->setDate(null, true);
-        }
-        if ($this->boundary == null) {
-            $this->setBoundary();
-        }
-    }
-
-    /**
-     * 检查是否有文本资源信息
-     * @return bool
-     */
-    public function checkFiles()
-    {
-        return count($this->files) == 0 ? false : true;
-    }
-
-    /**
-     * 获取文件
-     * @return string
-     * @throws Exception
-     */
-    public function getFile()
-    {
-        $this->checkHeaders();
-        if (!$this->checkFiles()) {
-            throw new Exception('No file was added.');
-        }
-        $enter = PHP_EOL;
-        $contents = implode($enter, $this->headers);
-        $contents .= $enter;
-        $contents .= "MIME-Version: 1.0 {$enter}";
-        $contents .= "Content-Type: multipart/related;{$enter}";
-        $contents .= "\tboundary=\"{$this->boundary}\";{$enter}";
-        $contents .= "\ttype=\"" . $this->files[0]['mimetype'] . "\"{$enter}";
-        $contents .= "X-MimeOLE: Produced By Mht File Maker v1.0 beta{$enter}";
-        $contents .= "{$enter}";
-        $contents .= "This is a multi-part message in MIME format.{$enter}";
-        $contents .= "{$enter}";
-        foreach ($this->files as $file) {
-            $contents .= "--{$this->boundary}{$enter}";
-            $contents .= "Content-Type: $file[mimetype]{$enter}";
-            $contents .= "Content-Transfer-Encoding: $file[encoding]{$enter}";
-            $contents .= "Content-Location: $file[filepath]{$enter}";
-            $contents .= "{$enter}";
-            $contents .= $file['filecont'];
-            $contents .= "{$enter}";
-        }
-        $contents .= "--{$this->boundary}--{$enter}";
-
-        return $contents;
-    }
-
-    /**
-     * 根据文件名获取MIME
-     * @param $filename
-     * @return string
-     */
-    public function getMimeType($filename)
-    {
-        $ext = pathinfo($filename, PATHINFO_EXTENSION);
-        switch (strtolower($ext)) {
-            case 'htm':
-                $mimetype = 'text/html';
-                break;
-            case 'html':
-                $mimetype = 'text/html';
-                break;
-            case 'txt':
-                $mimetype = 'text/plain';
-                break;
-            case 'cgi':
-                $mimetype = 'text/plain';
-                break;
-            case 'php':
-                $mimetype = 'text/plain';
-                break;
-            case 'css':
-                $mimetype = 'text/css';
-                break;
-            case 'jpg':
-                $mimetype = 'image/jpeg';
-                break;
-            case 'jpeg':
-                $mimetype = 'image/jpeg';
-                break;
-            case 'jpe':
-                $mimetype = 'image/jpeg';
-                break;
-            case 'gif':
-                $mimetype = 'image/gif';
-                break;
-            case 'png':
-                $mimetype = 'image/png';
-                break;
-            default:
-                $mimetype = 'application/octet-stream';
-                break;
-        }
-
-        return $mimetype;
     }
 
     /**
@@ -285,6 +159,7 @@ class MhtFileMaker
             $content = preg_replace('/<a.*?>(.*?)<\/a>/i', '$1', $content);
             $file['filecont'] = chunk_split(base64_encode($content));
         }
+
         return $this;
     }
 
@@ -307,11 +182,13 @@ class MhtFileMaker
                         if (!preg_match('/^http[s]?:\/\//i', trim($src[2]))) {
                             $url = $host . $src[2];
                             $file['filepath'] = $url;
+
                             return $src[1] . $url . $src[3];
                         } else {
                             return $src[0];
                         }
                     }, $imageTag[0]);
+
                     return $imageTag;
                 }, $content);
                 $file['filecont'] = chunk_split(base64_encode($content));
@@ -355,7 +232,7 @@ class MhtFileMaker
         foreach ($images as $image) {
             $imgObj = Image::fromFile($image['path']);
             if ($image['width'] || $image['height']) {
-                $imgObj->resize($image['width'], $image['height']);
+                $imgObj->resize((int)$image['width'], (int)$image['height']);
             }
             $this->addContents($image['path'], $this->getMimeType($image['path']), (string)$imgObj);
         }
@@ -367,67 +244,63 @@ class MhtFileMaker
      * @return bool
      * @throws Exception
      */
-    function makeFile($filename)
+    public function makeFile($filename)
     {
         $ext = pathinfo($filename, PATHINFO_EXTENSION);
         if (!in_array(strtolower($ext), ['doc', 'docx'])) {
             throw new Exception('not support file type ' . $ext);
         }
         $content = $this->getFile();
+
         return file_put_contents($filename, $content) > 0;
     }
 
     /**
-     * 浏览器下载
-     * @param null $name
-     * @param int $type
+     * 获取文件
+     * @return string
      * @throws Exception
      */
-    public function download($name = null, $type = 2003)
+    protected function getFile()
     {
-        $name = $name ? $name : date('YmdHis');
-        $content = $this->getFile();
+        $this->checkHeaders();
+        if (count($this->files) === 0) {
+            throw new Exception('No file was added.');
+        }
+        $enter = PHP_EOL;
+        $contents = implode($enter, $this->headers);
+        $contents .= $enter;
+        $contents .= "MIME-Version: 1.0 {$enter}";
+        $contents .= "Content-Type: multipart/related;{$enter}";
+        $contents .= "\tboundary=\"{$this->boundary}\";{$enter}";
+        $contents .= "\ttype=\"" . $this->files[0]['mimetype'] . "\"{$enter}";
+        $contents .= "X-MimeOLE: Produced By Mht File Maker v1.0 beta{$enter}";
+        $contents .= "{$enter}";
+        $contents .= "This is a multi-part message in MIME format.{$enter}";
+        $contents .= "{$enter}";
+        foreach ($this->files as $file) {
+            $contents .= "--{$this->boundary}{$enter}";
+            $contents .= "Content-Type: $file[mimetype]{$enter}";
+            $contents .= "Content-Transfer-Encoding: $file[encoding]{$enter}";
+            $contents .= "Content-Location: $file[filepath]{$enter}";
+            $contents .= "{$enter}";
+            $contents .= $file['filecont'];
+            $contents .= "{$enter}";
+        }
+        $contents .= "--{$this->boundary}--{$enter}";
 
-        header("Content-Disposition: attachment; filename=" . $name . $this->version($type)['ext']);
-        header("Content-Type:" . $this->version($type)['mime']);
-        header('Content-Transfer-Encoding: binary');
-        header("Cache-Control: no-cache, must-revalidate, post-check=0, pre-check=0");
-        header('Expires: 0');
-        echo $content;
+        return $contents;
     }
 
     /**
-     * @param $type
-     * @return mixed
-     * @throws Exception
+     * 检查生成完整文档必要的信息
      */
-    public function version($type)
+    public function checkHeaders()
     {
-        $versionOpt = [
-            2003 => [
-                'mime' => 'application/msword',
-                'ext' => '.doc',
-            ],
-            2007 => [
-                'mime' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'ext' => '.docx',
-            ]
-        ];
-
-        if (!isset($versionOpt[$type])) {
-            throw new Exception('error type');
+        if (!array_key_exists('date', $this->headersExists)) {
+            $this->setDate(null, true);
         }
-
-        return $versionOpt[$type];
-    }
-
-    protected function __clone()
-    {
-
-    }
-
-    protected function __wakeup()
-    {
-
+        if ($this->boundary == null) {
+            $this->setBoundary();
+        }
     }
 }

@@ -18,7 +18,7 @@ MhtFileMaker::getInstance()
     ->fetchImg('http://php.test/html2word')
     ->makeFile('resource/a.doc');
 
-// 2、浏览器下载
+//2、浏览器下载
 Html2WordMaker::getInstance()
     ->addFile('resource/tpl.html')
     ->fetchImg('http://php.test/html2word')
