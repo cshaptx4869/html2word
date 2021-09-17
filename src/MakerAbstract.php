@@ -22,6 +22,7 @@ abstract class MakerAbstract
 
     protected function __construct()
     {
+        $this->init();
     }
 
     protected function __clone()
@@ -29,6 +30,10 @@ abstract class MakerAbstract
     }
 
     protected function __wakeup()
+    {
+    }
+
+    protected function init()
     {
     }
 

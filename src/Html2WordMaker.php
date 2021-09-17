@@ -50,6 +50,7 @@ class Html2WordMaker extends MakerAbstract
      * @param string $host
      * @return $this
      * @throws \Nette\Utils\UnknownImageFileException
+     * @throws \DiDom\Exceptions\InvalidSelectorException
      */
     public function fetchImg($host = "")
     {
@@ -109,14 +110,8 @@ class Html2WordMaker extends MakerAbstract
         if (!in_array(strtolower($ext), ['doc', 'docx'])) {
             throw new Exception('not support file type ' . $ext);
         }
-        $content = $this->getFile();
-        $content = '<html 
-            xmlns:o="urn:schemas-microsoft-com:office:office" 
-            xmlns:w="urn:schemas-microsoft-com:office:word" 
-            xmlns="http://www.w3.org/TR/REC-html40">
-            <meta charset="UTF-8" />' . $content . '</html>';
 
-        return file_put_contents($filename, $content) > 0;
+        return file_put_contents($filename, $this->getFile()) > 0;
     }
 
     /**

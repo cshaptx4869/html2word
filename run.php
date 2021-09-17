@@ -10,21 +10,21 @@ Html2WordMaker::getInstance()
     ->addFile('resource/tpl.html')
     ->eraseLink()
     ->fetchImg('http://php.test/html2word')
-    ->makeFile('resource/a.doc');
+    ->makeFile('a.doc');
 
-MhtFileMaker::getInstance()
-    ->addFile('resource/tpl.html')
-    ->eraseLink()
-    ->fetchImg('http://php.test/html2word')
-    ->makeFile('resource/a.doc');
+ MhtFileMaker::getInstance()
+     ->addFile('resource/tpl.html')
+     ->eraseLink()
+     ->fetchImg('http://php.test/html2word')
+     ->makeFile('a.doc');
 
-//2、浏览器下载
-Html2WordMaker::getInstance()
-    ->addFile('resource/tpl.html')
-    ->fetchImg('http://php.test/html2word')
-    ->download();
+ //2、浏览器下载
+ Html2WordMaker::getInstance()
+     ->addFile('resource/tpl.html')
+     ->fetchImg('http://php.test/html2word')
+     ->download();
 
-MhtFileMaker::getInstance()
-    ->addFile('resource/tpl.html')
-    ->fetchImg('http://php.test/html2word')
-    ->download();
+ MhtFileMaker::getInstance()
+     ->addFile('resource/tpl.html')
+     ->fetchImg('http://php.test/html2word')
+     ->download();
