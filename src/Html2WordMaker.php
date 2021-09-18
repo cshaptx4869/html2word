@@ -15,6 +15,14 @@ class Html2WordMaker extends MakerAbstract
     private $filename;
     private $eraseLink = false;
     private $replace = [];
+    /**@var Document */
+    private $document;
+    protected $loadedTpl = false;
+
+    protected function init()
+    {
+        $this->document = new Document();
+    }
 
     /**
      * 添加html文件
@@ -55,9 +63,9 @@ class Html2WordMaker extends MakerAbstract
     public function fetchImg($host = "")
     {
         if ($this->filename) {
-            $document = new Document();
-            $document->loadHtmlFile($this->filename);
-            $elements = $document->find('img');
+            $this->document->loadHtmlFile($this->filename);
+            $this->loadedTpl = true;
+            $elements = $this->document->find('img');
             foreach ($elements as $element) {
                 $src = $element->getAttribute('src');
                 $width = $element->getAttribute('width');
@@ -126,6 +134,12 @@ class Html2WordMaker extends MakerAbstract
         }
         $content = file_get_contents($this->filename);
         if ($content) {
+            $this->loadedTpl === false && $this->document->loadHtmlFile($this->filename);
+            $htmlElement = $this->document->find('html');
+            $htmlElement && $content = $htmlElement[0]->setAttribute('xmlns:o', 'urn:schemas-microsoft-com:office:office')
+                ->setAttribute('xmlns:w', 'urn:schemas-microsoft-com:office:word')
+                ->setAttribute('xmlns', 'http://www.w3.org/TR/REC-html40')
+                ->html();
             $this->eraseLink && $content = preg_replace('/<a.*?>(.*?)<\/a>/i', '$1', $content);
             foreach ($this->replace as $row) {
                 $search = addcslashes($row['search'], '/');

@@ -41,7 +41,7 @@ composer require cshaptx4869/html2word
     <p>p是可以分段的. 使用PHP将html转word</p>
     <p>再分一段 使用PHP将html转word</p>
     <p>还分一段，下面加个图片</p>
-    <img src="/resource/houtarou.jpg" width="100px" height="100px">
+    <img src="/resource/houtarou.jpg" width="300" height="300">
     <br />
     <img alt="" class="has" src="https://img2020.cnblogs.com/blog/1215492/202108/1215492-20210805104218704-1239652393.png" style="width: 500px;">
     <div class="testclass">class样式样式是否可以</div>
